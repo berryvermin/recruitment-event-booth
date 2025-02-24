@@ -55,17 +55,17 @@ class RacetrackUI:
         self.calib_window.title("Calibration")
         self.calib_window.geometry("400x200")
 
-        self.calib_label = tk.Label(self.calib_window, text="Clear sensor", font=("Arial", 15))
+        self.calib_label = tk.Label(self.calib_window, text="Clear sensor please", font=("Arial", 15))
         self.calib_label.pack(pady=20)
         self.calib_window.update()
 
-        time.sleep(2)
+        time.sleep(3)
         self.bright_level = self.measure_light()
 
-        self.calib_label.config(text="Cover sensor")
+        self.calib_label.config(text="Cover sensor please")
         self.calib_window.update()
 
-        time.sleep(2)
+        time.sleep(3)
         self.dim_level = self.measure_light()
         print(self.bright_level, self.dim_level)
 
@@ -123,17 +123,16 @@ class RacetrackUI:
 
     def read_sensor(self):
         self.arduino.reset_input_buffer()  # Clear any previous data in buffer
+        voltage = None
         while self.running:
-            # Continuously clear the buffer to prevent old data from being processed
-            self.arduino.reset_input_buffer()
-            time.sleep(0.01) # FIXME: This does not work properly yet. See what could be done to fix it.
             if self.arduino.in_waiting > 0:
                 line = self.arduino.readline().decode("utf-8").strip()
                 try:
                     voltage = float(line)
                 except ValueError:
                     continue
-
+            
+            if voltage is not None:
                 self.update_ui(voltage)
 
                 if voltage <= self.shadow_threshold:
@@ -157,23 +156,31 @@ class RacetrackUI:
         self.countdown_window.after(0, self.label.config, {"text": f"Measured value: {voltage:.2f}"})
         print(voltage)
 
-    def show_result_screen(self, elapsed_time): # TODO: Push results to gsheet
+    def show_result_screen(self, elapsed_time):
         # Create a new window for the result
-        result_window = tk.Toplevel(self.root)
-        result_window.title("Measurement Result")
-        result_window.geometry("400x200")
+        self.result_window = tk.Toplevel(self.root)
+        self.result_window.title("Measurement Result")
+        self.result_window.geometry("400x200")
 
         name = self.name_var.get()
-        result_label = tk.Label(result_window, text=f"{name}, your time: {elapsed_time:.2f} sec", font=("Arial", 15))
+        result_label = tk.Label(self.result_window, text=f"{name}, your time: {elapsed_time:.2f} sec", font=("Arial", 15))
         result_label.pack(pady=20)
 
+        # Push results to Google Sheets
+        self.push_to_gsheet(name, elapsed_time)
+        
         # Add an Exit button to return to the main screen
-        exit_button = tk.Button(result_window, text="Exit", command=lambda: self.return_to_main(result_window), font=("Arial", 15))
+        exit_button = tk.Button(self.result_window, text="Exit", command=lambda: self.return_to_main(), font=("Arial", 15))
         exit_button.pack(pady=10)
 
-    def return_to_main(self, result_window):
+
+    def push_to_gsheet(self, name, elapsed_time): # TODO: Push results to gsheet
+        pass
+
+    def return_to_main(self):
         # Close the result window
-        result_window.destroy()
+        self.result_window.destroy()
+        self.countdown_window.destroy()
 
         # Reset timer variables
         self.start_time = None
