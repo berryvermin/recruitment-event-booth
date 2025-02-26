@@ -1,10 +1,11 @@
 # Should be exported as a standalone executable
 # Can be done by running: pyinstaller --onefile --console --clean racetrack-counter-ui.py
 
-import tkinter as tk
-import time
+import requests
 import serial
 import threading
+import time
+import tkinter as tk
 
 class RacetrackUI:
     def __init__(self, arduino_port="COM6", baud_rate=9600):
@@ -31,12 +32,26 @@ class RacetrackUI:
     def create_main_screen(self):
         """Sets up the main screen widgets."""
         self.name_var = tk.StringVar()
+        self.email_var = tk.StringVar()
+        self.track_var = tk.StringVar()
 
         self.name_label = tk.Label(self.root, text="Enter your name:", font=("Arial", 15))
         self.name_label.pack(pady=5)
 
         self.name_entry = tk.Entry(self.root, textvariable=self.name_var, font=("Arial", 15))
         self.name_entry.pack(pady=5)
+
+        self.email_label = tk.Label(self.root, text="Enter your email:", font=("Arial", 15))
+        self.email_label.pack(pady=5)
+
+        self.email_entry = tk.Entry(self.root, textvariable=self.email_var, font=("Arial", 15))
+        self.email_entry.pack(pady=5)
+
+        self.track_label = tk.Label(self.root, text="Enter track name:", font=("Arial", 15))
+        self.track_label.pack(pady=5)
+
+        self.track_entry = tk.Entry(self.root, textvariable=self.track_var, font=("Arial", 15))
+        self.track_entry.pack(pady=5)
 
         self.calibrate_button = tk.Button(self.root, text="Calibrate", command=self.calibrate, font=("Arial", 10))
         self.calibrate_button.place(x=10, y=10)
@@ -96,6 +111,10 @@ class RacetrackUI:
     def start_countdown(self):
         self.name_label.pack_forget()
         self.name_entry.pack_forget()
+        self.email_label.pack_forget()
+        self.email_entry.pack_forget()
+        self.track_label.pack_forget()
+        self.track_entry.pack_forget()
         self.calibrate_button.pack_forget()
         self.calibration_label.pack_forget()
         self.start_button.pack_forget()
@@ -163,19 +182,43 @@ class RacetrackUI:
         self.result_window.geometry("400x200")
 
         name = self.name_var.get()
+        email = self.email_var.get()
+        track = self.track_var.get()
         result_label = tk.Label(self.result_window, text=f"{name}, your time: {elapsed_time:.2f} sec", font=("Arial", 15))
         result_label.pack(pady=20)
 
         # Push results to Google Sheets
-        self.push_to_gsheet(name, elapsed_time)
+        self.push_to_gsheet(name, email, track, elapsed_time)
         
         # Add an Exit button to return to the main screen
         exit_button = tk.Button(self.result_window, text="Exit", command=lambda: self.return_to_main(), font=("Arial", 15))
         exit_button.pack(pady=10)
 
+    def push_to_gsheet(self, name, email, track, elapsed_time):
+        url = "https://script.google.com/macros/s/AKfycbyUeNjw-wHF3ODJ8TyBLEv41bUDjciQFqEs-wXTWizN1E8xFT3KzA9a11YNHTarRBxUPw/exec"
 
-    def push_to_gsheet(self, name, elapsed_time): # TODO: Push results to gsheet
-        pass
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+        hundredths = int((elapsed_time * 100) % 100)
+        formatted_time = f"{minutes:02}:{seconds:02}:{hundredths:02}"
+
+        payload = {
+            "sheet": "Gamification",
+            "action": "add",
+            "values": {
+                "Timestamp": timestamp,
+                "Name": name,
+                "E-mail": email,
+                "Track": track,
+                "Time": formatted_time,
+            }
+        }
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        response = requests.request("POST", url, json=payload, headers=headers)
 
     def return_to_main(self):
         # Close the result window
@@ -189,7 +232,6 @@ class RacetrackUI:
 
         # Re-display the main screen widgets
         self.create_main_screen()
-
 
     def stop(self):
         self.running = False
