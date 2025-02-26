@@ -1,0 +1,5 @@
+racetrack-counter-ui.spec
+upload-to-gsheets.spec
+
+build/
+dist/
