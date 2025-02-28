@@ -1,6 +1,7 @@
 # Should be exported as a standalone executable
 # Can be done by running: pyinstaller --onefile --console --clean racetrack-counter-ui.py
 
+import asyncio
 import requests
 import serial
 import threading
@@ -8,7 +9,7 @@ import time
 import tkinter as tk
 
 class RacetrackUI:
-    def __init__(self, arduino_port="COM6", baud_rate=9600):
+    def __init__(self, arduino_port="COM6", baud_rate=115200):
         # Initialize UI
         self.root = tk.Tk()
         self.root.title("Simple Sensor UI")
@@ -18,12 +19,8 @@ class RacetrackUI:
         self.arduino = serial.Serial(arduino_port, baud_rate, timeout=1)
         self.bright_level = 600
         self.dim_level = 250
-        self.shadow_threshold = (self.dim_level + self.bright_level) / 2 if self.dim_level and self.bright_level else 200
-
-        # Timing variables
-        self.start_time = None
-        self.second_crossing = None
-        self.timer_running = False
+        self.shadow_threshold = (self.dim_level + self.bright_level) / 2
+        self.number_laps = 3
 
         self.create_main_screen()
         
@@ -142,7 +139,16 @@ class RacetrackUI:
 
     def read_sensor(self):
         self.arduino.reset_input_buffer()  # Clear any previous data in buffer
+
+        # Timing variables
+        timer_running = False
+        start_time = None
+        
+        # Temporary parameters
         voltage = None
+        lap_count = 0
+        previous_light = "bright"
+
         while self.running:
             if self.arduino.in_waiting > 0:
                 line = self.arduino.readline().decode("utf-8").strip()
@@ -152,30 +158,27 @@ class RacetrackUI:
                     continue
             
             if voltage is not None:
-                self.update_ui(voltage)
+                asyncio.create_task(self.update_ui(voltage, lap_count)) # TODO: Add timer + previous laptimes to UI
 
-                if voltage <= self.shadow_threshold:
-                    # Start the time if the sensor is shadowed for the first time
-                    if self.start_time is None:
-                        self.start_time = time.time()
-                        self.timer_running = True
-                    # Stop the timer if the sensor is shadowed again
-                    elif self.second_crossing:
-                        self.second_crossing = time.time()
-                        elapsed_time = self.second_crossing - self.start_time
+                if voltage <= self.shadow_threshold and previous_light == "bright":
+                    if not timer_running:
+                        timer_running = True
+                        start_time = time.time()
+                    lap_count += 1
+                    if lap_count >= self.number_laps + 1:
+                        elapsed_time = time.time() - start_time
                         self.running = False
+                        timer_running = False
                         self.show_result_screen(elapsed_time)
+                    previous_light = "dim"
 
                 if voltage >= self.shadow_threshold:
-                    # If timer is running, allow the next shadow to stop the timer
-                    if self.timer_running is True:
-                        self.second_crossing = True
+                    previous_light = "bright"
 
-    def update_ui(self, voltage):
-        self.countdown_window.after(0, self.label.config, {"text": f"Measured value: {voltage:.2f}"})
-        print(voltage)
+    async def update_ui(self, voltage, lap_count):
+        self.countdown_window.after(0, self.label.config, {"text": f"Measured value: {voltage:.2f}\nCurrent lap: {lap_count}"})
 
-    def show_result_screen(self, elapsed_time):
+    def show_result_screen(self, elapsed_time): # TODO: Add all previous laptimes to the result screen
         # Create a new window for the result
         self.result_window = tk.Toplevel(self.root)
         self.result_window.title("Measurement Result")
