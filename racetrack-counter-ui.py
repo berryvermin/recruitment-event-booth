@@ -189,41 +189,14 @@ class RacetrackUI:
         track = self.track_var.get()
         result_label = tk.Label(self.result_window, text=f"{name}, your time: {elapsed_time:.2f} sec", font=("Arial", 15))
         result_label.pack(pady=20)
-
-        # Push results to Google Sheets
-        self.push_to_gsheet(name, email, track, elapsed_time)
         
         # Add an Exit button to return to the main screen
-        exit_button = tk.Button(self.result_window, text="Exit", command=lambda: self.return_to_main(), font=("Arial", 15))
+        exit_button = tk.Button(self.result_window, text="Exit", command=lambda: self.return_to_main(name, email, track, elapsed_time), font=("Arial", 15))
         exit_button.pack(pady=10)
-
-    def push_to_gsheet(self, name, email, track, elapsed_time):
-        url = "https://script.google.com/macros/s/AKfycbyUeNjw-wHF3ODJ8TyBLEv41bUDjciQFqEs-wXTWizN1E8xFT3KzA9a11YNHTarRBxUPw/exec"
-
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        minutes = int(elapsed_time // 60)
-        seconds = int(elapsed_time % 60)
-        hundredths = int((elapsed_time * 100) % 100)
-        formatted_time = f"{minutes:02}:{seconds:02}:{hundredths:02}"
-
-        payload = {
-            "sheet": "Gamification",
-            "action": "add",
-            "values": {
-                "Timestamp": timestamp,
-                "Name": name,
-                "E-mail": email,
-                "Track": track,
-                "Time": formatted_time,
-            }
-        }
-        headers = {
-            "Content-Type": "application/json",
-        }
-
-        response = requests.request("POST", url, json=payload, headers=headers)
-
-    def return_to_main(self):
+        
+    def return_to_main(self, name, email, track, elapsed_time):
+        # Push results to Google Sheets
+        self.push_to_gsheet(name, email, track, elapsed_time)
         # Close the result window
         self.result_window.destroy()
         self.countdown_window.destroy()
