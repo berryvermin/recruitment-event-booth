@@ -20,7 +20,7 @@ class RacetrackUI:
         self.bright_level = 600
         self.dim_level = 250
         self.shadow_threshold = (self.dim_level + self.bright_level) / 2
-        self.number_laps = 3
+        self.number_laps = 10
 
         self.create_main_screen()
         
@@ -158,7 +158,7 @@ class RacetrackUI:
                     continue
             
             if voltage is not None:
-                asyncio.create_task(self.update_ui(voltage, lap_count)) # TODO: Add timer + previous laptimes to UI
+                self.root.after(0, self.update_ui, voltage, lap_count) # TODO: Add timer + previous laptimes to UI
 
                 if voltage <= self.shadow_threshold and previous_light == "bright":
                     if not timer_running:
@@ -175,7 +175,7 @@ class RacetrackUI:
                 if voltage >= self.shadow_threshold:
                     previous_light = "bright"
 
-    async def update_ui(self, voltage, lap_count):
+    def update_ui(self, voltage, lap_count):
         self.countdown_window.after(0, self.label.config, {"text": f"Measured value: {voltage:.2f}\nCurrent lap: {lap_count}"})
 
     def show_result_screen(self, elapsed_time): # TODO: Add all previous laptimes to the result screen
@@ -208,6 +208,32 @@ class RacetrackUI:
 
         # Re-display the main screen widgets
         self.create_main_screen()
+
+    def push_to_gsheet(self, name, email, track, elapsed_time):
+        url = "https://script.google.com/macros/s/AKfycbyUeNjw-wHF3ODJ8TyBLEv41bUDjciQFqEs-wXTWizN1E8xFT3KzA9a11YNHTarRBxUPw/exec"
+
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        minutes = int(elapsed_time // 60)
+        seconds = int(elapsed_time % 60)
+        hundredths = int((elapsed_time * 100) % 100)
+        formatted_time = f"{minutes:02}:{seconds:02}:{hundredths:02}"
+
+        payload = {
+            "sheet": "Gamification",
+            "action": "add",
+            "values": {
+                "Timestamp": timestamp,
+                "Name": name,
+                "E-mail": email,
+                "Track": track,
+                "Time": formatted_time,
+            }
+        }
+        headers = {
+            "Content-Type": "application/json",
+        }
+
+        response = requests.request("POST", url, json=payload, headers=headers)
 
     def stop(self):
         self.running = False
