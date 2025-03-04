@@ -8,7 +8,8 @@ import threading
 import time
 import tkinter as tk
 
-class RacetrackUI:
+class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
+    # TODO (nice-to-have): Add sound effects for countdown and lap detection
     def __init__(self, arduino_port="COM6", baud_rate=115200):
         # Initialize UI
         self.root = tk.Tk()
@@ -26,7 +27,7 @@ class RacetrackUI:
         
         self.root.mainloop()
 
-    def create_main_screen(self):
+    def create_main_screen(self): # TODO (must-have): Add type or content checking for all input fields before being able to start the measurement
         """Sets up the main screen widgets."""
         self.name_var = tk.StringVar()
         self.email_var = tk.StringVar()
@@ -79,6 +80,7 @@ class RacetrackUI:
 
         time.sleep(3)
         self.dim_level = self.measure_light()
+        self.shadow_threshold = (self.dim_level + self.bright_level) / 2
         print(self.bright_level, self.dim_level)
 
         self.calib_label.config(text="Calibration complete!")
@@ -105,7 +107,7 @@ class RacetrackUI:
         avg_value = sum(values) / len(values) if values else 0
         return avg_value
 
-    def start_countdown(self):
+    def start_countdown(self): # TODO (must-have): move countdown to measurement window; we already measure from the start of countdown 
         self.name_label.pack_forget()
         self.name_entry.pack_forget()
         self.email_label.pack_forget()
@@ -137,7 +139,7 @@ class RacetrackUI:
             self.sensor_thread = threading.Thread(target=self.read_sensor, daemon=True)
             self.sensor_thread.start()
 
-    def read_sensor(self):
+    def read_sensor(self): # TODO (must have): Add live timer to UI
         self.arduino.reset_input_buffer()  # Clear any previous data in buffer
 
         # Timing variables
@@ -158,7 +160,7 @@ class RacetrackUI:
                     continue
             
             if voltage is not None:
-                self.root.after(0, self.update_ui, voltage, lap_count) # TODO: Add timer + previous laptimes to UI
+                self.root.after(0, self.update_ui, voltage, lap_count) # TODO (nice-to-have): Add previous laptimes to UI
 
                 if voltage <= self.shadow_threshold and previous_light == "bright":
                     if not timer_running:
@@ -176,9 +178,10 @@ class RacetrackUI:
                     previous_light = "bright"
 
     def update_ui(self, voltage, lap_count):
-        self.countdown_window.after(0, self.label.config, {"text": f"Measured value: {voltage:.2f}\nCurrent lap: {lap_count}"})
+        self.countdown_window.after(0, self.label.config, {"text": f"Measured value: {voltage:.2f}\nCurrent lap: {lap_count} / {self.number_laps}"})
 
-    def show_result_screen(self, elapsed_time): # TODO: Add all previous laptimes to the result screen
+    def show_result_screen(self, elapsed_time): # TODO (nice-to-have): Add all previous laptimes to the result screen
+        # TODO (must-have): Add Next user / Cancel record / Restart buttons to result screen
         # Create a new window for the result
         self.result_window = tk.Toplevel(self.root)
         self.result_window.title("Measurement Result")
