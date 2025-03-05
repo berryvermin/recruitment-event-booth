@@ -15,7 +15,7 @@ hundredths = int((time_value * 100) % 100)
 formatted_time = f"{minutes:02}:{seconds:02}:{hundredths:02}"
 
 payload = {
-    "sheet": "Gamification",
+    "sheet": "Track",
     "action": "add",
     "values": {
         "Timestamp": timestamp,
