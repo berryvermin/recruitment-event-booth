@@ -1,22 +1,37 @@
 # Should be exported as a standalone executable
 # Can be done by running: pyinstaller --onefile --console --clean racetrack-counter-ui.py
 
-import asyncio
 import requests
 import serial
+import serial.tools.list_ports
 import threading
 import time
 import tkinter as tk
+from tkinter import messagebox
+import webbrowser
+
+def find_arduino():
+    """Detects the Arduino's COM port and returns the port name."""
+    ports = serial.tools.list_ports.comports()
+
+    for port in ports:
+        if "Arduino" in port.description or "usbmodem" in port.device or "usbserial" in port.device:
+            print(f"Arduino found on {port.device}")
+            return port.device
+
+    print("No Arduino detected. Check your connections.")
+    return None
 
 class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
     # TODO (nice-to-have): Add sound effects for countdown and lap detection
-    def __init__(self, arduino_port="COM6", baud_rate=115200):
+    def __init__(self, baud_rate=115200):
         # Initialize UI
         self.root = tk.Tk()
         self.root.title("Simple Sensor UI")
         self.root.geometry("800x400")
-        
+
         # Initialize Arduino connection
+        arduino_port = find_arduino()
         self.arduino = serial.Serial(arduino_port, baud_rate, timeout=1)
         self.bright_level = 600
         self.dim_level = 250
@@ -24,14 +39,15 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
         self.number_laps = 10
 
         self.create_main_screen()
-        
+
         self.root.mainloop()
 
-    def create_main_screen(self): # TODO (must-have): Add type or content checking for all input fields before being able to start the measurement
+    def create_main_screen(self):
         """Sets up the main screen widgets."""
         self.name_var = tk.StringVar()
         self.email_var = tk.StringVar()
         self.track_var = tk.StringVar()
+        self.consent_var = tk.BooleanVar()
 
         self.name_label = tk.Label(self.root, text="Enter your name:", font=("Arial", 15))
         self.name_label.pack(pady=5)
@@ -45,11 +61,18 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
         self.email_entry = tk.Entry(self.root, textvariable=self.email_var, font=("Arial", 15))
         self.email_entry.pack(pady=5)
 
-        self.track_label = tk.Label(self.root, text="Enter track name:", font=("Arial", 15))
-        self.track_label.pack(pady=5)
+        self.consent_check = tk.Checkbutton(self.root, text="I consent to the collection of my information for the purpose of contacting me for relevant job opportunities. My information will be stored for 2 years. I can withdraw my consent at any time.", variable=self.consent_var, font=("Arial", 10), wraplength=400)
+        self.consent_check.pack(pady=10)
 
-        self.track_entry = tk.Entry(self.root, textvariable=self.track_var, font=("Arial", 15))
-        self.track_entry.pack(pady=5)
+        self.privacy_statement = tk.Label(self.root, text="Check out the privacy statement for more information on how Picnic handles your personal data.", font=("Arial", 10), fg="blue", cursor="hand2")
+        self.privacy_statement.pack(pady=5)
+        self.privacy_statement.bind("<Button-1>", lambda e: self.open_privacy_statement())
+
+        # self.track_label = tk.Label(self.root, text="Enter track name:", font=("Arial", 15))
+        # self.track_label.pack(pady=5)
+
+        # self.track_entry = tk.Entry(self.root, textvariable=self.track_var, font=("Arial", 15))
+        # self.track_entry.pack(pady=5)
 
         self.calibrate_button = tk.Button(self.root, text="Calibrate", command=self.calibrate, font=("Arial", 10))
         self.calibrate_button.place(x=10, y=10)
@@ -57,11 +80,39 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
         self.calibration_label = tk.Label(self.root, text="", font=("Arial", 12))
         self.calibration_label.place(x=10, y=370)
 
-        self.start_button = tk.Button(self.root, text="Start", command=self.start_countdown, font=("Arial", 15))
+        self.start_button = tk.Button(self.root, text="Start", command=self.validate_inputs, font=("Arial", 15))
         self.start_button.pack(pady=10)
 
         self.quit_button = tk.Button(self.root, text="Quit", command=self.root.destroy, font=("Arial", 15))
         self.quit_button.pack(pady=10)
+
+    def open_privacy_statement(self):
+        webbrowser.open("https://jobs.picnic.app/en/privacy-policy")
+
+    def validate_inputs(self):
+        """Validates the input fields before starting the measurement."""
+        name = self.name_var.get().strip()
+        email = self.email_var.get().strip()
+        consent = self.consent_var.get()
+        # track = self.track_var.get().strip()
+
+        if not name:
+            messagebox.showerror("Input Error", "Name cannot be empty.")
+            return
+
+        if not email or "@" not in email or "." not in email:
+            messagebox.showerror("Input Error", "Please enter a valid email address.")
+            return
+
+        if not consent:
+            messagebox.showerror("Input Error", "Please check the consent box.")
+            return
+
+        # if not track:
+        #     tk.messagebox.showerror("Input Error", "Track name cannot be empty.")
+        #     return
+
+        self.start_countdown()
 
     def calibrate(self):
         self.calib_window = tk.Toplevel(self.root)
@@ -107,13 +158,13 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
         avg_value = sum(values) / len(values) if values else 0
         return avg_value
 
-    def start_countdown(self): # TODO (must-have): move countdown to measurement window; we already measure from the start of countdown 
+    def start_countdown(self): # TODO (must-have): move countdown to measurement window; we already measure from the start of countdown
         self.name_label.pack_forget()
         self.name_entry.pack_forget()
         self.email_label.pack_forget()
         self.email_entry.pack_forget()
-        self.track_label.pack_forget()
-        self.track_entry.pack_forget()
+        # self.track_label.pack_forget()
+        # self.track_entry.pack_forget()
         self.calibrate_button.pack_forget()
         self.calibration_label.pack_forget()
         self.start_button.pack_forget()
@@ -145,7 +196,7 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
         # Timing variables
         timer_running = False
         start_time = None
-        
+
         # Temporary parameters
         voltage = None
         lap_count = 0
@@ -158,7 +209,7 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
                     voltage = float(line)
                 except ValueError:
                     continue
-            
+
             if voltage is not None:
                 self.root.after(0, self.update_ui, voltage, lap_count) # TODO (nice-to-have): Add previous laptimes to UI
 
@@ -189,14 +240,14 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
 
         name = self.name_var.get()
         email = self.email_var.get()
-        track = self.track_var.get()
+        # track = self.track_var.get()
         result_label = tk.Label(self.result_window, text=f"{name}, your time: {elapsed_time:.2f} sec", font=("Arial", 15))
         result_label.pack(pady=20)
-        
+
         # Add an Exit button to return to the main screen
-        exit_button = tk.Button(self.result_window, text="Exit", command=lambda: self.return_to_main(name, email, track, elapsed_time), font=("Arial", 15))
+        exit_button = tk.Button(self.result_window, text="Exit", command=lambda: self.return_to_main(name=name, email=email, track=1, elapsed_time=elapsed_time), font=("Arial", 15))
         exit_button.pack(pady=10)
-        
+
     def return_to_main(self, name, email, track, elapsed_time):
         # Push results to Google Sheets
         self.push_to_gsheet(name, email, track, elapsed_time)
