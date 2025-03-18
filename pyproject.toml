@@ -1,0 +1,23 @@
+[tool.poetry]
+package-mode = false
+name = "argo-utils"
+description = "This Python package provides various utilities to be used in Argo workflows."
+authors = ["Picnic Data Engineering <etl@teampicnic.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~=3.11.0"
+picnic-database = "~=14.1.0"
+picnic-tools = "~=1.0"
+picnic-data-job = { version = "~=0.13.0", extras = ["sentry"] }
+
+[tool.poetry.group.dev.dependencies]
+picnic-guide = "~=7.0"
+
+[[tool.poetry.source]]
+name = "picnic"
+url = "https://nexus.global.picnicinternational.com/repository/pypi-public/simple/"
+priority = "primary"
+
+[tool.picnic-poetry]
+set-version = true
