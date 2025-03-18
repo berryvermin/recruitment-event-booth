@@ -3,21 +3,35 @@
 
 import requests
 import serial
+import serial.tools.list_ports
 import threading
 import time
 import tkinter as tk
 from tkinter import messagebox
 import webbrowser
 
+def find_arduino():
+     """Detects the Arduino's COM port and returns the port name."""
+     ports = serial.tools.list_ports.comports()
+     
+     for port in ports:
+         if "Arduino" in port.description or "usbmodem" in port.device or "usbserial" in port.device:
+             print(f"Arduino found on {port.device}")
+             return port.device
+ 
+     print("No Arduino detected. Check your connections.")
+     return None
+
 class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
     # TODO (nice-to-have): Add sound effects for countdown and lap detection
-    def __init__(self, arduino_port="COM6", baud_rate=115200):
+    def __init__(self, baud_rate=115200):
         # Initialize UI
         self.root = tk.Tk()
         self.root.title("Simple Sensor UI")
         self.root.geometry("800x400")
         
         # Initialize Arduino connection
+        arduino_port = find_arduino()
         self.arduino = serial.Serial(arduino_port, baud_rate, timeout=1)
         self.bright_level = 600
         self.dim_level = 250
