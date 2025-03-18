@@ -73,7 +73,7 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
         self.quit_button.pack(pady=10)
 
     def open_privacy_statement(self):
-        webbrowser.open("https://picnic.atlassian.net/wiki/spaces/acc/pages/5179867143/Lightweight+DevEx+dashboard")
+        webbrowser.open("https://jobs.picnic.app/en/privacy-policy")
 
     def validate_inputs(self):
         """Validates the input fields before starting the measurement."""
