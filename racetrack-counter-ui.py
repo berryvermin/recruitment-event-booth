@@ -40,10 +40,11 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         arduino_port = find_arduino()
         self.arduino = serial.Serial(arduino_port, baud_rate, timeout=1)
         self.bright_level = 600
-        self.dim_level = 250
+        self.dim_level = 100
         self.shadow_threshold = (self.dim_level + self.bright_level) / 2
         self.number_laps = 10
         self.ui_update_period = 0.1
+        self.debounce_time = 0.5
 
         self.create_main_screen()
 
@@ -195,7 +196,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
 
     def start_countdown(
         self,
-    ):  # TODO (must-have): move countdown to measurement window; we already measure from the start of countdown
+    ):
         self.name_label.pack_forget()
         self.name_entry.pack_forget()
         self.email_label.pack_forget()
@@ -209,33 +210,26 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         self.start_button.pack_forget()
         self.quit_button.pack_forget()
 
-        # Create a separate window for countdown and measured value
-        self.countdown_window = tk.Toplevel(self.root)
-        self.countdown_window.title("Countdown and Measurement")
-        self.countdown_window.geometry("400x200")
+        # Create a separate window for measurement
+        self.measurement_window = tk.Toplevel(self.root)
+        self.measurement_window.title("Measurement")
+        self.measurement_window.geometry("400x200")
 
-        self.label = tk.Label(self.countdown_window, text="", font=("Arial", 20))
+        self.label = tk.Label(self.measurement_window, text="", font=("Arial", 20))
         self.label.pack(pady=20)
 
-        self.countdown(3)
+        self.running = True
+        self.sensor_thread = threading.Thread(target=self.read_sensor, daemon=True)
+        self.sensor_thread.start()
 
-    def countdown(self, count):
-        if count > 0:
-            self.label.config(text=f"Starting in {count}...")
-            self.countdown_window.after(1000, self.countdown, count - 1)
-        else:
-            self.label.config(text="Starting measurement!")
-            self.running = True
-            self.sensor_thread = threading.Thread(target=self.read_sensor, daemon=True)
-            self.sensor_thread.start()
-
-    def read_sensor(self):  # TODO (must have): Add live timer to UI
+    def read_sensor(self):
         self.arduino.reset_input_buffer()  # Clear any previous data in buffer
 
         # Timing variables
         timer_running = False
         last_ui_update_time = time.time()
         start_time = 0
+        last_lap_time = 0
         
         # Temporary parameters
         voltage = None
@@ -251,35 +245,45 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
                     continue
 
             if voltage is not None:
-                print(f"Measured value: {voltage:.2f}")
-                if voltage <= self.shadow_threshold and previous_light == "bright":
+                current_time = time.time()
+                print(f"Lap: {lap_count}, measured value: {voltage:.2f}, t: {(current_time - start_time):.10f}")
+
+                # Detect light-to-dark transition (shadow detected), with at least 0.5 seconds between laps
+                if voltage <= self.shadow_threshold and previous_light == "bright" and current_time - last_lap_time >= self.debounce_time:
                     if not timer_running:
                         timer_running = True
-                        start_time = time.time()
+                        start_time = current_time
                     lap_count += 1
+                    print(f"Lap count switch to {lap_count}")
                     if lap_count >= self.number_laps + 1:
-                        elapsed_time = time.time() - start_time
+                        elapsed_time = current_time - start_time
                         self.running = False
                         timer_running = False
                         self.show_result_screen(elapsed_time)
                     previous_light = "dim"
+                    last_lap_time = current_time
 
+                # Detect dark-to-light transition (reset state)
                 if voltage >= self.shadow_threshold:
                     previous_light = "bright"
-                if time.time() - last_ui_update_time > self.ui_update_period:
+
+                # UI update only every self.ui_update_period seconds
+                if current_time - last_ui_update_time > self.ui_update_period:
                     self.root.after(0, self.update_ui, lap_count, start_time)
-                    last_ui_update_time = time.time()
+                    last_ui_update_time = current_time
 
     def update_ui(self, lap_count, start_time):
+        header = "Race underway!"
         if start_time == 0:
             elapsed_time = 0
+            header = "Ready when you are!"
         else:
             elapsed_time = time.time() - start_time
-        self.countdown_window.after(
+        self.measurement_window.after(
             0, 
             self.label.config,
             {
-                "text": f"Elapsed time: {elapsed_time:.1f} s\nCurrent lap: {lap_count} / {self.number_laps}"
+                "text": f"{header}\n\nElapsed time: {elapsed_time:.1f} s\nCurrent lap: {lap_count} / {self.number_laps}"
             },
         )
 
@@ -318,7 +322,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         self.push_to_gsheet(name, email, track, elapsed_time)
         # Close the result window
         self.result_window.destroy()
-        self.countdown_window.destroy()
+        self.measurement_window.destroy()
 
         # Reset timer variables
         self.start_time = None
