@@ -246,7 +246,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
 
             if voltage is not None:
                 current_time = time.time()
-                print(f"Lap: {lap_count}, measured value: {voltage:.2f}, t: {(current_time - start_time):.10f}")
+                print(f"Measured value: {voltage:.2f}")
 
                 # Detect light-to-dark transition (shadow detected), with at least 0.5 seconds between laps
                 if voltage <= self.shadow_threshold and previous_light == "bright" and current_time - last_lap_time >= self.debounce_time:
@@ -254,7 +254,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
                         timer_running = True
                         start_time = current_time
                     lap_count += 1
-                    print(f"Lap count switch to {lap_count}")
+                    print(f"Lap count switch to: {lap_count}, time: {(current_time - start_time):.2f}")
                     if lap_count >= self.number_laps + 1:
                         elapsed_time = current_time - start_time
                         self.running = False
@@ -269,10 +269,14 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
 
                 # UI update only every self.ui_update_period seconds
                 if current_time - last_ui_update_time > self.ui_update_period:
-                    self.root.after(0, self.update_ui, lap_count, start_time)
+                    self.root.after(0, self.update_ui, lap_count, voltage, start_time)
                     last_ui_update_time = current_time
+                
+                # Reset voltage so we only trigger this loop when values come in
+                voltage = None
+                time.sleep(0.005)
 
-    def update_ui(self, lap_count, start_time):
+    def update_ui(self, lap_count, voltage, start_time):
         header = "Race underway!"
         if start_time == 0:
             elapsed_time = 0
