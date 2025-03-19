@@ -135,7 +135,6 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         if not name:
             messagebox.showerror("Input Error", "Name cannot be empty.")
             return
-        
         if not email or "@" not in email or "." not in email:
             messagebox.showerror("Input Error", "Please enter a valid email address.")
             return
@@ -146,7 +145,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         #     tk.messagebox.showerror("Input Error", "Track name cannot be empty.")
         #     return
 
-        self.start_countdown()
+        self.start_measurement()
 
     def calibrate(self):
         self.calib_window = tk.Toplevel(self.root)
@@ -194,7 +193,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         avg_value = sum(values) / len(values) if values else 0
         return avg_value
 
-    def start_countdown(
+    def start_measurement(
         self,
     ):
         self.name_label.pack_forget()
@@ -269,14 +268,14 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
 
                 # UI update only every self.ui_update_period seconds
                 if current_time - last_ui_update_time > self.ui_update_period:
-                    self.root.after(0, self.update_ui, lap_count, voltage, start_time)
+                    self.root.after(0, self.update_ui, lap_count, start_time)
                     last_ui_update_time = current_time
                 
                 # Reset voltage so we only trigger this loop when values come in
                 voltage = None
                 time.sleep(0.005)
 
-    def update_ui(self, lap_count, voltage, start_time):
+    def update_ui(self, lap_count, start_time):
         header = "Race underway!"
         if start_time == 0:
             elapsed_time = 0
@@ -291,10 +290,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
             },
         )
 
-    def show_result_screen(
-        self, elapsed_time
-    ):  # TODO (nice-to-have): Add all previous laptimes to the result screen
-        # TODO (must-have): Add Next user / Cancel record / Restart buttons to result screen
+    def show_result_screen(self, elapsed_time):
         # Create a new window for the result
         self.result_window = tk.Toplevel(self.root)
         self.result_window.title("Measurement Result")
@@ -302,7 +298,6 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
 
         name = self.name_var.get()
         email = self.email_var.get()
-        # track = self.track_var.get()
         result_label = tk.Label(
             self.result_window,
             text=f"{name}, your time: {elapsed_time:.2f} sec",
@@ -310,20 +305,31 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         )
         result_label.pack(pady=20)
 
-        # Add an Exit button to return to the main screen
-        exit_button = tk.Button(
+        # Add a button to discard the measurement and return to the main screen
+        discard_button = tk.Button(
             self.result_window,
-            text="Exit",
+            text="Discard measurement",
+            command=self.return_to_main,
+            font=("Arial", 15),
+        )
+        discard_button.pack(pady=10)
+
+        # Add a button to upload the time to the leaderboard and exit
+        upload_button = tk.Button(
+            self.result_window,
+            text="Upload time to leaderboard and exit",
             command=lambda: self.return_to_main(
                 name=name, email=email, track=1, elapsed_time=elapsed_time
             ),
             font=("Arial", 15),
         )
-        exit_button.pack(pady=10)
+        upload_button.pack(pady=10)
 
-    def return_to_main(self, name, email, track, elapsed_time):
-        # Push results to Google Sheets
-        self.push_to_gsheet(name, email, track, elapsed_time)
+    def return_to_main(self, name=None, email=None, track=None, elapsed_time=None):
+        if name and email and track and elapsed_time:
+            # Push results to Google Sheets
+            self.push_to_gsheet(name, email, track, elapsed_time)
+        
         # Close the result window
         self.result_window.destroy()
         self.measurement_window.destroy()
