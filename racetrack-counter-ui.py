@@ -51,6 +51,7 @@ class RacetrackUI:  # TODO (nice-to-have): Auto full screen / hide X button
         self.dim_level = 100
         self.shadow_threshold = (self.dim_level + self.bright_level) / 2
         self.number_laps = 10
+        self.countdown_duration = 3
         self.ui_update_period = 0.1
         self.debounce_time = 0.5
 
@@ -238,6 +239,7 @@ class RacetrackUI:  # TODO (nice-to-have): Auto full screen / hide X button
         last_ui_update_time = time.time()
         start_time = 0
         last_lap_time = 0
+        self.countdown_left = self.countdown_duration
         
         # Temporary parameters
         voltage = None
@@ -285,19 +287,32 @@ class RacetrackUI:  # TODO (nice-to-have): Auto full screen / hide X button
                 time.sleep(0.005)
 
     def update_ui(self, lap_count, start_time):
-        header = "Race underway!"
-        if start_time == 0:
-            elapsed_time = 0
-            header = "Ready when you are!"
+        if start_time == 0 and self.countdown_left >= 0:
+            self.measurement_window.after(
+                0, 
+                self.label.config,
+                {
+                    "text": f"Ready? Race starting in\n\n {self.countdown_left:.1f}"
+                },
+            )
+            self.countdown_left -= self.ui_update_period
+        elif start_time == 0:
+            self.measurement_window.after(
+                0, 
+                self.label.config,
+                {
+                    "text": "GO!"
+                },
+            )
         else:
             elapsed_time = time.time() - start_time
-        self.measurement_window.after(
-            0, 
-            self.label.config,
-            {
-                "text": f"{header}\n\nElapsed time: {elapsed_time:.1f} s\nCurrent lap: {lap_count} / {self.number_laps}"
-            },
-        )
+            self.measurement_window.after(
+                0, 
+                self.label.config,
+                {
+                    "text": f"Race underway!\n\nElapsed time: {elapsed_time:.1f} s\nCurrent lap: {lap_count} / {self.number_laps}"
+                },
+            )
 
     def show_result_screen(self, elapsed_time):
         # Create a new window for the result
