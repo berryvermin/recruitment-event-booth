@@ -392,11 +392,5 @@ class RacetrackUI:  # TODO (nice-to-have): Auto full screen / hide X button
 
         response = requests.request("POST", url, json=payload, headers=headers)
 
-    def stop(self):
-        self.running = False
-        self.arduino.close()
-        self.root.quit()
-
-
 if __name__ == "__main__":
     RacetrackUI()
