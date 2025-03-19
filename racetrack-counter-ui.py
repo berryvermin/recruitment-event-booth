@@ -267,10 +267,10 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
                 if voltage >= self.shadow_threshold:
                     previous_light = "bright"
                 if time.time() - last_ui_update_time > self.ui_update_period:
-                    self.root.after(0, self.update_ui, voltage, lap_count, start_time)
+                    self.root.after(0, self.update_ui, lap_count, start_time)
                     last_ui_update_time = time.time()
 
-    def update_ui(self, voltage, lap_count, start_time):
+    def update_ui(self, lap_count, start_time):
         if start_time == 0:
             elapsed_time = 0
         else:
