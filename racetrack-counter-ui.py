@@ -37,6 +37,7 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
         self.dim_level = 250
         self.shadow_threshold = (self.dim_level + self.bright_level) / 2
         self.number_laps = 10
+        self.ui_update_period = 0.1
 
         self.create_main_screen()
         
@@ -163,6 +164,8 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
         self.name_entry.pack_forget()
         self.email_label.pack_forget()
         self.email_entry.pack_forget()
+        self.consent_check.pack_forget()
+        self.privacy_statement.pack_forget()
         # self.track_label.pack_forget()
         # self.track_entry.pack_forget()
         self.calibrate_button.pack_forget()
@@ -195,7 +198,8 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
 
         # Timing variables
         timer_running = False
-        start_time = None
+        last_ui_update_time = time.time()
+        start_time = 0
         
         # Temporary parameters
         voltage = None
@@ -211,8 +215,7 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
                     continue
             
             if voltage is not None:
-                self.root.after(0, self.update_ui, voltage, lap_count) # TODO (nice-to-have): Add previous laptimes to UI
-
+                print(f"Measured value: {voltage:.2f}")
                 if voltage <= self.shadow_threshold and previous_light == "bright":
                     if not timer_running:
                         timer_running = True
@@ -227,9 +230,16 @@ class RacetrackUI: # TODO (should-have): Auto full screen / hide X button
 
                 if voltage >= self.shadow_threshold:
                     previous_light = "bright"
+                if time.time() - last_ui_update_time > self.ui_update_period:
+                    self.root.after(0, self.update_ui, voltage, lap_count, start_time)
+                    last_ui_update_time = time.time()
 
-    def update_ui(self, voltage, lap_count):
-        self.countdown_window.after(0, self.label.config, {"text": f"Measured value: {voltage:.2f}\nCurrent lap: {lap_count} / {self.number_laps}"})
+    def update_ui(self, voltage, lap_count, start_time):
+        if start_time == 0:
+            elapsed_time = 0
+        else:
+            elapsed_time = time.time() - start_time
+        self.countdown_window.after(0, self.label.config, {"text": f"Elapsed time: {elapsed_time:.1f} s\nCurrent lap: {lap_count} / {self.number_laps}"})
 
     def show_result_screen(self, elapsed_time): # TODO (nice-to-have): Add all previous laptimes to the result screen
         # TODO (must-have): Add Next user / Cancel record / Restart buttons to result screen
