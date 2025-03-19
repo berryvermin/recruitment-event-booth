@@ -27,14 +27,22 @@ def find_arduino():
     print("No Arduino detected. Check your connections.")
     return None
 
+def center_window(window, window_width, window_height):
+    # Center the window on the screen
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    position_top = int(screen_height / 2 - window_height / 2)
+    position_right = int(screen_width / 2 - window_width / 2)
+    window.geometry(f"{window_width}x{window_height}+{position_right}+{position_top}")
 
-class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
+
+class RacetrackUI:  # TODO (nice-to-have): Auto full screen / hide X button
     # TODO (nice-to-have): Add sound effects for countdown and lap detection
     def __init__(self, baud_rate=115200):
         # Initialize UI
         self.root = tk.Tk()
-        self.root.title("Simple Sensor UI")
-        self.root.geometry("800x400")
+        self.root.title("Racetrack timer UI")
+        center_window(self.root, 800, 400)
 
         # Initialize Arduino connection
         arduino_port = find_arduino()
@@ -150,12 +158,13 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
     def calibrate(self):
         self.calib_window = tk.Toplevel(self.root)
         self.calib_window.title("Calibration")
-        self.calib_window.geometry("400x200")
+        center_window(self.calib_window, 400, 200)
 
         self.calib_label = tk.Label(
             self.calib_window, text="Clear sensor please", font=("Arial", 15)
         )
         self.calib_label.pack(pady=20)
+        self.calib_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         self.calib_window.update()
 
         time.sleep(3)
@@ -167,7 +176,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         time.sleep(3)
         self.dim_level = self.measure_light()
         self.shadow_threshold = (self.dim_level + self.bright_level) / 2
-        print(self.bright_level, self.dim_level)
+        print(f"Bright level: {self.bright_level:.0f}, dim level: {self.dim_level:.0f}, shadow threshold: {self.shadow_threshold:.0f}")
 
         self.calib_label.config(text="Calibration complete!")
         self.calib_window.after(2000, self.calib_window.destroy)
@@ -212,7 +221,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         # Create a separate window for measurement
         self.measurement_window = tk.Toplevel(self.root)
         self.measurement_window.title("Measurement")
-        self.measurement_window.geometry("400x200")
+        center_window(self.measurement_window, 400, 200)        
 
         self.label = tk.Label(self.measurement_window, text="", font=("Arial", 20))
         self.label.pack(pady=20)
@@ -294,7 +303,7 @@ class RacetrackUI:  # TODO (should-have): Auto full screen / hide X button
         # Create a new window for the result
         self.result_window = tk.Toplevel(self.root)
         self.result_window.title("Measurement Result")
-        self.result_window.geometry("400x200")
+        center_window(self.result_window, 400, 200)
 
         name = self.name_var.get()
         email = self.email_var.get()
