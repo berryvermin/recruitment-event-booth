@@ -1,0 +1,12 @@
+[tool.poetry]
+package-mode = false
+name = "recruitment_event_booth"
+description = "Python packages for recruitement_event_booth."
+authors = ["Picnic Data Engineering <etl@teampicnic.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "~=3.12.0"
+requests = "==2.32.3"
+pyserial = "==3.5"
+threaded = "==4.2.0"
