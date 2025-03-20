@@ -153,7 +153,6 @@ class RacetrackUI:  # TODO (nice-to-have): Auto full screen / hide X button
         # if not track:
         #     tk.messagebox.showerror("Input Error", "Track name cannot be empty.")
         #     return
-
         self.start_measurement()
 
     def calibrate(self):
