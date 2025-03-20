@@ -50,7 +50,7 @@ class RacetrackUI:  # TODO (nice-to-have): Auto full screen / hide X button
         self.bright_level = 600
         self.dim_level = 100
         self.shadow_threshold = (self.dim_level + self.bright_level) / 2
-        self.number_laps = 10
+        self.number_laps = 7
         self.countdown_duration = 3
         self.ui_update_period = 0.1
         self.debounce_time = 0.5
