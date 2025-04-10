@@ -24,8 +24,8 @@ def find_arduino():
             print(f"Arduino found on {port.device}")
             return port.device
 
-    print("No Arduino detected. Check your connections.")
-    return None
+    print("No Arduino detected. Using default port COM4.")
+    return "COM4"
 
 def center_window(window, window_width, window_height):
     # Center the window on the screen
